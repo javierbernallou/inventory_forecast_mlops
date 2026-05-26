@@ -1,0 +1,100 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebook
+#.ipynb_checkpoints
+#*.ipynb
+#.jupyter/
+
+# Data & Models
+data/raw/
+data/external/
+data/processed/features_dataset.parquet
+models/
+*.parquet
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.pth
+*.pt
+*.onnx
+!data/processed/optimized_inventory.parquet
+
+# MLOps & Tracking
+mlruns/
+.mlflow/
+outputs/
+logs/
+*.log
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Airflow
+airflow/logs/
+airflow/plugins/
+airflow/dags/*.pyc
+
+# Monitoring outputs
+monitoring/reports/
+*.html
