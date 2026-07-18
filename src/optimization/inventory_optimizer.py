@@ -1,56 +1,72 @@
 from pathlib import Path
 import pandas as pd
 import numpy as np
-import pulp
+from scipy.stats import norm
 
-PROCESSED_DATA_PATH = Path("data/processed")
+from config import PROCESSED_DATA_PATH, HOLDING_COST_RATE, LOST_MARGIN_RATE
 
-def optimize_single_item(predicted_sales, recommended_stock, max_capacity=500):
-    """Función matemática para optimizar el inventario de una sola fila.
-    
-    Busca minimizar el coste de almacenamiento respetando las restricciones físicas.
+
+def compute_critical_ratio(sell_price, holding_cost_rate=HOLDING_COST_RATE, lost_margin_rate=LOST_MARGIN_RATE):
+    """Calcula el ratio crítico del modelo newsvendor para cada producto.
+
+    Co (overage cost): coste de tener una unidad de más en stock.
+    La aproximamos como un % del precio de venta (capital inmovilizado,
+    espacio de almacén, riesgo de obsolescencia). Por defecto, 2% del precio.
+
+    Cu (underage cost): coste de no tener una unidad cuando se necesita.
+    La aproximamos como el margen perdido en esa venta: % del precio de
+    venta que representa beneficio. Por defecto, 30% del precio.
+
+    Ambos costes se expresan en función del sell_price para que el ratio
+    sea independiente de la escala de precios entre productos: un producto
+    de 1€ y uno de 100€ pueden tener la misma economía relativa de
+    sobre-stock vs. rotura de stock.
     """
-    problem = pulp.LpProblem("SingleItemInventory", pulp.LpMinimize)
-    
-    # 2. Variable de decisión: Cuánto inventario físico pedir/mantener
-    # El inventario no puede ser negativo (lowBound=0) ni superar la capacidad del almacén
-    inventory = pulp.LpVariable(
-        "inventory", 
-        lowBound=0, 
-        upBound=max_capacity, 
-        cat="Integer"  # Forzamos a que decida en unidades enteras
-    )
-    
-    # Asumimos un coste teórico de 1€ por unidad almacenada al día
-    holding_cost_unit = 1.0
-    problem += holding_cost_unit * inventory
-    
-    problem += inventory >= recommended_stock
-    
-    problem.solve(pulp.PULP_CBC_CMD(msg=False))
-    
-    return int(inventory.varValue) if inventory.varValue is not None else int(recommended_stock)
+    overage_cost = holding_cost_rate * sell_price
+    underage_cost = lost_margin_rate * sell_price
+
+    # Ratio crítico: la pieza central del modelo newsvendor. Cuanto más caro
+    # es quedarse corto (Cu) respecto a quedarse largo (Co), más cerca de 1
+    # está este ratio, y más colchón de seguridad recomendará el modelo.
+    critical_ratio = underage_cost / (underage_cost + overage_cost)
+    return critical_ratio
+
+
+def optimize_inventory_vectorized(df):
+    critical_ratio = compute_critical_ratio(df["sell_price"])
+
+    z = norm.ppf(critical_ratio)
+
+    demand_std = df["rolling_std_7"].fillna(0)
+
+  
+    optimized_inventory = df["predicted_sales"] + z * demand_std
+
+    optimized_inventory = np.clip(optimized_inventory, 0, None)
+    optimized_inventory = np.ceil(optimized_inventory).astype(int)
+
+    return optimized_inventory, critical_ratio, z
 
 
 def run_optimization_pipeline():
     input_file = PROCESSED_DATA_PATH / "forecast_results.parquet"
     output_file = PROCESSED_DATA_PATH / "optimized_inventory.parquet"
-    
+
     if not input_file.exists():
-        raise FileNotFoundError(f"No se encuentra {input_file}.")
-        
+        raise FileNotFoundError(f"No se encuentra {input_file}. Ejecuta predict.py primero.")
+
     df = pd.read_parquet(input_file)
-    
     print(f"   -> Dataset cargado con {df.shape[0]} filas.")
-    
-    df["optimized_inventory"] = df.apply(
-        lambda row: optimize_single_item(row["predicted_sales"], row["recommended_stock"]), 
-        axis=1
-    )
-    
+
+    optimized_inventory, critical_ratio, z = optimize_inventory_vectorized(df)
+    df["optimized_inventory"] = optimized_inventory
+    df["critical_ratio"] = critical_ratio.round(3)
+    df["safety_factor_z"] = z.round(3)
+
     df.to_parquet(output_file, index=False)
     print(f"Guardado en: {output_file}")
-    print(df[["date", "store_id", "item_id", "sales", "predicted_sales", "optimized_inventory"]].head())
+    print(df[["date", "store_id", "item_id", "sales", "predicted_sales",
+              "critical_ratio", "safety_factor_z", "optimized_inventory"]].head())
 
 
 if __name__ == "__main__":
