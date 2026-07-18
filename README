@@ -1,0 +1,31 @@
+# Inventory Demand Forecasting & MLOps Pipeline
+
+An end-to-end machine learning pipeline for **demand forecasting and stock recommendations**, built on the M5 Forecasting Accuracy dataset (retail sales time series). The project covers the full MLOps lifecycle: data preparation, model training, experiment tracking, and containerized model serving.
+
+## Features
+- **Data preparation & feature engineering** for time-series retail sales data
+- **Demand forecasting model** built with XGBoost
+- **Experiment tracking and model versioning** with MLflow
+- **Model serving via a REST API** built with FastAPI, running on Uvicorn
+- **Containerized deployment** with Docker for production-ready serving
+- **Monitoring** via Prometheus client metrics exposed by the service
+- Efficient data serialization with PyArrow
+
+## Tech Stack
+Python · Pandas · XGBoost · FastAPI · Docker · MLflow · Prometheus · PyArrow
+
+## Project Structure
+inventory_forecast_mlops/
+├── data/processed/       # Cleaned and feature-engineered datasets
+├── notebooks/            # Exploratory data analysis and model prototyping
+├── src/                  # Production code: API, data processing, model logic
+├── Dockerfile             # Containerized FastAPI service definition
+└── requirements.txt
+
+## Status
+🚧 Active development. Next steps:
+- [ ] Migrate feature engineering logic from notebooks into `src/`
+- [ ] Complete FastAPI endpoints (prediction + health check)
+- [ ] Log training runs and metrics to MLflow
+- [ ] Add automated tests and a CI workflow
+- [ ] Document example API requests/responses
